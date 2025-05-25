@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Surgical Quiz</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        .quiz-container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+            margin: auto;
+        }
+        .question {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .question h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .options label {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #fff;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        .options label:hover {
+            background-color: #e9f5ff;
+            border-color: #007bff;
+        }
+        .options input[type="radio"] {
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+        .options label.selected {
+            background-color: #d0eaff;
+            border-color: #0056b3;
+        }
+
+        .options input[type="radio"]:checked {
+            accent-color: #007bff;
+        }
+
+        .submit-btn {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        .submit-btn:hover {
+            background-color: #0056b3;
+        }
+        .score-container {
+            margin-top: 30px;
+            padding: 20px;
+            border: 2px solid #007bff;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 20px;
+            display: none;
+        }
+        .error-message {
+            color: red;
+            font-size: 0.9em;
+            margin-top: 5px;
+            display: none;
+        }
+        .highlight-error {
+            border: 1px solid red;
+        }
+        .options label.correct {
+            background-color: #d4edda;
+            border-color: #28a745;
+        }
+        .options label.incorrect {
+            background-color: #f8d7da;
+            border-color: #dc3545;
+        }
+        .question-note {
+            font-size: 0.9em;
+            color: #888;
+            margin-top: 5px;
+        }
+        .supplication {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #555;
+            padding: 15px;
+            border: 1px dashed #ccc;
+            border-radius: 5px;
+            background-color: #f0f0f0;
+        }
+        .developer-note {
+            margin-top: 10px;
+            text-align: center;
+            font-size: 1.0em;
+            font-weight: bold;
+            color: #0B13A2;
+        }
+    </style>
+</head>
+<body>
+    <div class="quiz-container">
+        <h2>Surgical True/False Quiz</h2>
+        <form id="quizForm">
+        </form>
+
+        <div id="scoreContainer" class="score-container">
+            <h3>Your Score: <span id="score">0</span> / <span id="totalQuestions">0</span></h3>
+        </div>
+    </div>
+
+    <script>
+        const quizForm = document.getElementById('quizForm');
+        const scoreContainer = document.getElementById('scoreContainer');
+        const scoreSpan = document.getElementById('score');
+        const totalQuestionsSpan = document.getElementById('totalQuestions');
+
+        let correctAnswersMap = {}; // Stores questionId -> correctAnswerText
+        let shuffledQuestionOrderIds = []; // Stores the qID strings in their shuffled order
+
+        // Define ALL questions and their correct answers.
+        const allQuestionsData = [
+            {
+                question: 'Extracellular compartment represents one third of total body water.',
+                options: ['True', 'False'],
+                correctAnswer: 'True'
+            },
+            {
+                question: 'Chloride (Cl−) is the predominant ion in extracellular fluid.',
+                options: ['True', 'False'],
+                correctAnswer: 'True'
+            },
+            {
+                question: 'Sensible losses are measurable and include urine.',
+                options: ['True', 'False'],
+                correctAnswer: 'True'
+            },
+            {
+                question: 'Postoperative resuscitation is an indication of fluid therapy.',
+                options: ['True', 'False'],
+                correctAnswer: 'True'
+            },
+            {
+                question: 'Taking antineoplastic medications is an indication of central venous catheter.',
+                options: ['True', 'False'],
+                correctAnswer: 'True'
+            },
+            {
+                question: 'Central venous catheter is usually inserted in internal jugular, or subclavian vein.',
+                options: ['True', 'False'],
+                correctAnswer: 'True'
+            },
+            {
+                question: 'Calcium ampoules are given in massive blood transfusion.',
+                options: ['True', 'False'],
+                correctAnswer: 'True'
+            },
+            {
+                question: 'Iron overload is a complication of blood transfusion.',
+                options: ['True', 'False'],
+                correctAnswer: 'True'
+            },
+            {
+                question: 'Factor VIII is used for Hemophilia A.',
+                options: ['True', 'False'],
+                correctAnswer: 'True'
+            },
+            {
+                question: 'Factor VIII is used in Hemophilia A.',
+                options: ['True', 'False'],
+                correctAnswer: 'True'
+            },
+            {
+                question: 'Bronchospasm and laryngeal edema are characteristic of anaphylactic shock.',
+                options: ['True', 'False'],
+                correctAnswer: 'True'
+            },
+            {
+                question: 'Patients under corticosteroid or immunosuppressive drugs are susceptible to septic shock.',
+                options: ['True', 'False'],
+                correctAnswer: 'True'
+            },
+            {
+                question: 'Cardiogenic shock is characterized by congested neck veins and a high CVP.',
+                options: ['True', 'False'],
+                correctAnswer: 'True'
+            },
+            {
+                question: 'Refractory Stage in shock leads to death even after trial of resuscitation.',
+                options: ['True', 'False'],
+                correctAnswer: 'True'
+            },
+            {
+                question: 'Massive pulmonary embolism is a cause of cardiogenic shock.',
+                options: ['True', 'False'],
+                correctAnswer: 'True'
+            },
+            {
+                question: 'Adrenaline and hydrocortisone are used in anaphylactic shock.',
+                options: ['True', 'False'],
+                correctAnswer: 'True'
+            },
+            {
+                question: 'Increased tension in the wound will lead to impaired healing.',
+                options: ['True', 'False'],
+                correctAnswer: 'True'
+            },
+            {
+                question: 'Marjolin ulcer is a malignant ulcer related to scar.',
+                options: ['True', 'False'],
+                correctAnswer: 'True'
+            },
+            {
+                question: 'Cholestatic liver disease is a common metabolic complication of long-term parenteral nutrition.',
+                options: ['True', 'False'],
+                correctAnswer: 'True'
+            },
+            {
+                question: 'Serum albumin is NOT an absolute marker for nutritional status.',
+                options: ['True', 'False'],
+                correctAnswer: 'True'
+            },
+            {
+                question: 'Enteral nutrition should be preferred over parenteral nutrition because it prevents intestinal atrophy.',
+                options: ['True', 'False'],
+                correctAnswer: 'True'
+            },
+            {
+                question: 'Pneumothorax is a potential catheter-related complication of TPN.',
+                options: ['True', 'False'],
+                correctAnswer: 'True'
+            },
+            {
+                question: 'Systemic inflammatory response syndrome (SIRS) can be caused by pancreatitis.',
+                options: ['True', 'False'],
+                correctAnswer: 'True'
+            },
+            {
+                question: 'For incompetent subjects, consent is required from a responsible family member who could either be a parent or a legal guardian.',
+                options: ['True', 'False'],
+                correctAnswer: 'True'
+            },
+            {
+                question: 'The patient can drink clear fluids up to 3 to 4 hours before surgery if the physician allows.',
+                options: ['True', 'False'],
+                correctAnswer: 'True'
+            },
+            {
+                question: 'Water makes up 75% of the total body weight.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Normal saline is the replacement fluid favored by anesthetists because it is a physiological mixture of ions and water.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Central IV access is the preferred method for short-term IV therapy in the hospital setting.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Mechanical phlebitis can be caused by peripheral IV high alkaline, high acidic or hypertonic solutions.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Potassium is the predominant ion in extracellular fluid.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Viral hepatitis A can be transmitted by blood (product) transfusion.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Transfusion-related lung Injury is a delayed complication.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Packed RBCs are used in mild anemia.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Copper overload is a complication of blood transfusion.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Hypokalemia is common in massive blood transfusion.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Cryoprecipitate is used for Hemophilia B.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Young healthy individuals can lose as much as 35% of blood volume without any significant change in arterial blood pressure.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Vasodilators and inotropic drugs are used in hypovolemic shock.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Spinal shock is a type of anaphylactic shock.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'The cause of shock in septic shock is dehydration from high grade fever.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'If a wound is left alone to heal, granulation tissue forms and healing is said to be by primary intention.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'The scar in secondary intention is a fine strong scar.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Keloid is a raised red firm scar that never continues to worsen after 6 months & resolves spontaneously.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Maturation phase in wound healing starts normally after 2 weeks.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'The neovascularized tissue (granulation tissue) occurs in the maturation phase of wound healing.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Lacerated wound is less liable to infection than cutting wound.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Vitamin D deficiency is responsible for lack of maturation of protocollagen.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Clean surgical wounds with well-coapted edges heal by secondary intention.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Parenteral nutrition is the preferred type of Nutrition therapy.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Discontinuation of TPN should take place when the patient can satisfy 50% of his or her caloric and protein needs with oral intake or enteral feeding.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Renal impairment is a common complication of enteral nutrition.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Significant weight loss is unintentional weight loss >10% of a patient’s weight in the preceding 3 months.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Total parenteral nutrition (TPN) is used to refresh the small intestinal villi when villous and cellular atrophy caused by excessive enteral feeding.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Liver dysfunction is a complication of enteral nutrition.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Bradycardia <60/min is one of the diagnostic criteria of SIRS.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Immunosuppression is a local risk factor for wound infection.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Operations that involve opening of a viscus with minimal spillage or contamination is class II surgical wound.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Operations that involve opening of a viscus with significant contamination is classified as Class II surgical wounds.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Surgical site infection usually appears after the 10th day postoperative.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Antibioma is a neoplasm arising from use of antibiotic.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Septicemia is presence of septic emboli in the blood.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Offensive smell is a characteristic of cellulitis.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Severe sepsis is SIRS with a documented infection.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Patient should stop smoking 1 year before surgery.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Patient should be free of pain after surgery to promote deep respiration and optimal lung expansion.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'If hair is to be removed, remove it immediately before the operation using razor shaving.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'In patients with acute renal insufficiency, elective surgery should be postponed until optimization of kidney function.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Nurse should instruct patient that oral intake of water should be withheld at least 24 hours before the operation.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'During postoperative care, mild pain should be maintained to make the patient alert.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Assessment of the mouth is done in pre-operative care for dental operations only.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            },
+            {
+                question: 'Intraoperative phase is the period of time from decision for surgery until the patient is transferred into the operating room.',
+                options: ['True', 'False'],
+                correctAnswer: 'False'
+            }
+        ];
+
+        // Function to shuffle an array (Fisher-Yates algorithm)
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        // Function to render the quiz questions dynamically
+        function renderQuiz() {
+            quizForm.innerHTML = ''; // Clear existing questions
+            correctAnswersMap = {}; // Reset correct answers map
+            shuffledQuestionOrderIds = []; // Reset shuffled IDs
+
+            const shuffledQuestions = [...allQuestionsData]; // Create a copy to shuffle
+            shuffleArray(shuffledQuestions); // SHUFFLE THE QUESTIONS DATA ITSELF
+
+            let currentDisplayNumber = 1;
+
+            shuffledQuestions.forEach(qData => {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'question';
+                const questionId = `q${currentDisplayNumber}`; // Assign new ID based on shuffled position
+                questionDiv.id = questionId;
+
+                const questionText = document.createElement('h3');
+                questionText.textContent = `${currentDisplayNumber}. ${qData.question}`; // Add dynamic numbering
+                questionDiv.appendChild(questionText);
+
+                const optionsDiv = document.createElement('div');
+                optionsDiv.className = 'options';
+
+                // For True/False, we don't need to shuffle options within each question as they are always 'True' and 'False'
+                const fixedOptions = ['True', 'False']; 
+
+                fixedOptions.forEach((optionText, index) => {
+                    const label = document.createElement('label');
+                    const input = document.createElement('input');
+                    input.type = 'radio';
+                    input.name = questionId; // Use the dynamic question ID
+                    input.value = optionText; // Store the actual option text as the value
+
+                    const span = document.createElement('span');
+                    span.textContent = optionText; 
+
+                    // Add event listener for selection feedback and error message hiding
+                    input.addEventListener('change', function() {
+                        this.closest('.options').querySelectorAll('label').forEach(lbl => {
+                            lbl.classList.remove('selected');
+                        });
+                        this.closest('label').classList.add('selected');
+                        this.closest('.question').classList.remove('highlight-error');
+                        this.closest('.question').querySelector('.error-message').style.display = 'none';
+                    });
+
+                    label.appendChild(input);
+                    label.appendChild(span);
+                    optionsDiv.appendChild(label);
+                });
+
+                questionDiv.appendChild(optionsDiv);
+
+                const errorMessage = document.createElement('div');
+                errorMessage.className = 'error-message';
+                errorMessage.textContent = 'Please select an option for this question.';
+                questionDiv.appendChild(errorMessage);
+
+                quizForm.appendChild(questionDiv);
+
+                // Populate correctAnswersMap and shuffledQuestionOrderIds array for submission logic
+                correctAnswersMap[questionId] = qData.correctAnswer;
+                shuffledQuestionOrderIds.push(questionId);
+
+                currentDisplayNumber++;
+            });
+
+            // Add the supplication before the submit button
+            const supplicationDiv = document.createElement('div');
+            supplicationDiv.className = 'supplication';
+            supplicationDiv.textContent = 'اللهم إني استودعك ما قرأت وما حفظت وما تعلمت، فرده لي عند حاجتي إليه';
+            quizForm.appendChild(supplicationDiv);
+
+            // Add the developer note
+            const developerNoteDiv = document.createElement('div');
+            developerNoteDiv.className = 'developer-note';
+            developerNoteDiv.textContent = 'تم إعداده وتنفيذه بواسطة عبدو بكر';
+            quizForm.appendChild(developerNoteDiv);
+
+            const submitButton = document.createElement('button');
+            submitButton.type = 'submit';
+            submitButton.className = 'submit-btn';
+            submitButton.textContent = 'Submit Quiz';
+            quizForm.appendChild(submitButton);
+        }
+
+        // Render the quiz when the page loads
+        document.addEventListener('DOMContentLoaded', renderQuiz);
+
+
+        // --- Quiz Submission Logic ---
+        quizForm.addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent default form submission
+
+            let score = 0;
+            let firstUnansweredQuestion = null;
+            const questionElements = document.querySelectorAll('.question');
+
+            // Reset previous feedback and errors
+            questionElements.forEach(questionDiv => {
+                questionDiv.classList.remove('highlight-error');
+                questionDiv.querySelector('.error-message').style.display = 'none';
+                questionDiv.querySelectorAll('label').forEach(label => {
+                    label.classList.remove('correct', 'incorrect', 'selected');
+                });
+            });
+
+            // Check answers and validate
+            shuffledQuestionOrderIds.forEach(qId => { // Iterate through the dynamically assigned question IDs (in shuffled order)
+                const selectedOption = document.querySelector(`input[name="${qId}"]:checked`);
+                const questionDiv = document.getElementById(qId);
+
+                if (!selectedOption) {
+                    if (!firstUnansweredQuestion) {
+                        firstUnansweredQuestion = questionDiv; // Store the first unanswered question
+                    }
+                    questionDiv.classList.add('highlight-error');
+                    questionDiv.querySelector('.error-message').style.display = 'block';
+                } else {
+                    const userAnswer = selectedOption.value;
+                    const correctAnswer = correctAnswersMap[qId]; // Get correct answer from the map
+
+                    const label = selectedOption.closest('label');
+
+                    if (userAnswer === correctAnswer) {
+                        score++;
+                        label.classList.add('correct');
+                    } else {
+                        label.classList.add('incorrect');
+                        // Find and highlight the correct answer using its exact text value
+                        const correctLabel = Array.from(questionDiv.querySelectorAll('.options label')).find(lbl =>
+                            lbl.querySelector('input').value === correctAnswer
+                        );
+                        if (correctLabel) {
+                            correctLabel.classList.add('correct');
+                        }
+                    }
+                }
+            });
+
+            if (firstUnansweredQuestion) {
+                // If there's an unanswered question, scroll to it
+                firstUnansweredQuestion.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return; // Stop execution here, don't show score yet
+            }
+
+            // Display score (only if all questions are answered)
+            totalQuestionsSpan.textContent = allQuestionsData.length; // Use original total count for score
+            scoreSpan.textContent = score;
+            scoreContainer.style.display = 'block';
+
+            // Scroll to top of score
+            scoreContainer.scrollIntoView({ behavior: 'smooth' });
+        });
+    </script>
+</body>
+</html>
